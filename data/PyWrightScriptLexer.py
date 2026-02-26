@@ -60,7 +60,10 @@ commands = [
     "fade", "grey", "invert", "tint", 
 
     # Misc. stuff (some might be custom macros, or stuff that wasn't in 0.9880)
-    "in", "out", "obj"
+    "in", "out", "obj",
+
+    # Undocumented commands found by reading the actual source code of the PyWright engine
+    "framerate", "step", "set_ex", "showrecord", "surf3d", "mesh"
 ]
 
 special_variables = [
