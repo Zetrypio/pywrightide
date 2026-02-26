@@ -267,7 +267,7 @@ class PyWrightGameInfo:
         return macros_list
 
     def parse_builtin_macros(self):
-        self.builtin_macros = PyWrightGameInfo._parse_macros_in_folder(self.pywright_folder_path)
+        self.builtin_macros = PyWrightGameInfo._parse_macros_in_folder(self.pywright_folder_path / "core" / "macros")
 
     def parse_game_macros(self):
         self.game_macros = PyWrightGameInfo._parse_macros_in_folder(self.game_path)
