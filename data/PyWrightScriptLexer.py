@@ -264,7 +264,8 @@ class CustomQsciAPIs(QsciAPIs):
         @return the list of custom completions computed on the context.
         """
         
-        sci: QsciScintilla = self.lexer().parent()
+        lexer: PyWrightScriptLexer = self.lexer()
+        sci: QsciScintilla = lexer.parent()
         line, index = sci.getCursorPosition()
         text:str = sci.text(line)[:index].lstrip()
 
@@ -283,7 +284,7 @@ class CustomQsciAPIs(QsciAPIs):
 
         # Commands or macros:
         if len(split) == 1:
-            macros = [*self.lexer().builtin_macros, *self.lexer().game_macros]
+            macros = [*lexer.builtin_macros, *lexer.game_macros, *lexer.case_macros]
             if split[0].startswith("{"):
                 return formatCompletions("{%s}", macros)
             return commands + macros
@@ -319,6 +320,7 @@ class PyWrightScriptLexer(QsciLexerCustom):
 
         self.builtin_macros: list[str] = []
         self.game_macros: list[str] = []
+        self.case_macros: list[str] = []
 
         # Create a custom API to manage custom autocompletion
         api = CustomQsciAPIs(self)
@@ -340,6 +342,9 @@ class PyWrightScriptLexer(QsciLexerCustom):
 
     def set_game_macros(self, new_list: list[str]):
         self.game_macros = new_list
+
+    def set_case_macros(self, new_list: list[str]):
+        self.case_macros = new_list
 
     def set_editor_color_theme(self):
         # Default Text Settings
@@ -471,6 +476,8 @@ class PyWrightScriptLexer(QsciLexerCustom):
             self.setStyling(token[1], 7)
         elif token[0] in self.game_macros:
             self.setStyling(token[1], 8)
+        elif token[0] in self.case_macros:
+            self.setStyling(token[1], 8)    # Question: do we do separate styles for case and game macros?
         else:
             self.setStyling(token[1], 0)
 
