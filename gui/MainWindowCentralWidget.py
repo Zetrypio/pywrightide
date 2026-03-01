@@ -101,6 +101,17 @@ class MainWindowCentralWidget(QWidget):
         file_edit_widget.cursor_position_changed.connect(self._update_line_and_col)
         file_edit_widget.selected_text_changed.connect(self._handle_text_selection_changed)
         file_name = Path(file_path).name
+        # Append folder name if two tabs with the same name are open
+        for i in range(self.tab_widget.count()):
+            # Skip Game Properties tab
+            if self.is_game_properties_tab(i):
+                continue
+
+            opened_tab: FileEditWidget = self.tab_widget.widget(i)
+
+            if opened_tab.file_name == file_name:
+                file_name = file_name + " @ " + file_edit_widget.file_folder
+                self.tab_widget.setTabText(i, opened_tab.file_name + " @ " + opened_tab.file_folder)
         self.open_new_tab(file_edit_widget, file_name if file_name != "" else "New File")
 
     def _try_loading_editor_theme(self, theme_name: str):
