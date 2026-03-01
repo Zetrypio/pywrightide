@@ -49,6 +49,7 @@ class FileEditWidget(QWidget):
         self.setLayout(self.layout)
 
         self.file_path = selected_file
+        self.file_folder = str(Path(self.file_path).parent.name)
         self.file_name = "New File"
 
         self._is_a_new_file = self.file_path == ""

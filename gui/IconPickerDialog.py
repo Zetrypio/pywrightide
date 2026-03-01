@@ -17,7 +17,7 @@ ICON_SIZE = QSize(128, 128)
 
 class IconPickerDialog(QDialog):
 
-    def __init__(self, pywright_root_dir: str, selected_game_info: PyWrightGameInfo | None = None, parent=None):
+    def __init__(self, pywright_root_dir: str, selected_game_info: PyWrightGameInfo | None = None, limit_to_folders: list[str] = [], parent=None):
         super().__init__(parent)
 
         self.setWindowTitle("Pick an Icon")
@@ -25,6 +25,8 @@ class IconPickerDialog(QDialog):
         self._pywright_root_dir = pywright_root_dir
 
         self._selected_game_info = selected_game_info
+
+        self._limit_to_folders = limit_to_folders
 
         self._subfolder_combobox = QComboBox()
         self._subfolder_combobox.currentIndexChanged.connect(self._refresh_icon_view)
@@ -86,7 +88,16 @@ class IconPickerDialog(QDialog):
         if not art_folder_path.exists() or not art_folder_path.is_dir():
             raise FileNotFoundError("art folder doesn't exist!")
 
-        return [x.name for x in art_folder_path.iterdir() if x.is_dir()]
+        result = []
+
+        for x in art_folder_path.iterdir():
+            if x.is_dir():
+                if len(self._limit_to_folders) > 0 and x.name not in self._limit_to_folders:
+                    continue
+
+                result.append(x.name)
+
+        return result
 
     def _refresh_icon_view(self):
         subfolder_name = self._subfolder_combobox.currentText()

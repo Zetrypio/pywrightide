@@ -1,5 +1,12 @@
 # PyWright IDE Changelog
 
+## Unreleased
+
+* Tabs that have duplicate names now will also show the folder the opened file is in. (by in1tiate)
+* Switched to PyGame Community Edition as it is more actively developed. (by in1tiate)
+* Changed PyQt version requirement to be "6.10.0 *or later*". (by in1tiate)
+* Case background image can now be configured from Case Properties dialog.
+
 ## Version 1.5 - 30.11.2025
 
 * Lexer improvements:

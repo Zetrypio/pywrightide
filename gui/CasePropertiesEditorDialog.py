@@ -17,7 +17,7 @@ class CasePropertiesEditorDialog(QDialog):
         :param parent: Parent Widget of this dialog"""
         super().__init__(parent)
 
-        self.setFixedSize(300, 200)
+        self.setFixedSize(380, 200)
 
         self._selected_game_info = selected_game_info
 
@@ -30,7 +30,7 @@ class CasePropertiesEditorDialog(QDialog):
             self.setWindowTitle("Case Properties: {}".format(selected_case.case_name))
             self._selected_case = selected_case
 
-        self._case_properties_widget = CasePropertiesWidget(self._selected_case)
+        self._case_properties_widget = CasePropertiesWidget(self._selected_game_info, self._selected_case)
 
         self._buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self._buttonBox.accepted.connect(self._handle_accept)
