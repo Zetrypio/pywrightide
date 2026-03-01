@@ -4,13 +4,15 @@ from pathlib import Path
 
 
 class PyWrightCase:
+    """Holds the basic information regarding one PyWright case"""
 
-    def __init__(self, case_name: str = "", initial_script: str = ""):
+    def __init__(self, case_name: str = "", initial_script: str = "", case_background_name: str = ""):
         self.case_name: str = case_name.strip()
         self.initial_script_name: str = initial_script.strip()
         self.textbox_lines: int = 3
         self.textbox_wrap: bool = True
         self.initial_evidence_list: list[str] = []
+        self.case_background_name: str = case_background_name.strip()
 
     def generate_case_intro_txt(self) -> str:
         result = "set _textbox_wrap {}\n".format(self.textbox_wrap) + \
@@ -99,6 +101,34 @@ class PyWrightCase:
                     case "script":
                         self.initial_script_name = line_splitted[1]
 
+    def read_from_case_screen_txt(self, case_folder_path: str):
+        if not Path(case_folder_path).exists() or not Path(case_folder_path).is_dir():
+            print("Invalid case folder!")
+            return
+
+        case_screen_txt = Path("{}/case_screen.txt".format(case_folder_path))
+
+        if not case_screen_txt.exists():
+            print("Missing case_screen.txt file for the case!")
+            return
+
+        with open(case_screen_txt, "r") as f:
+            line = f.readline()
+
+            if not line.startswith("bg"):
+                print("Invalid case_screen.txt")
+                return
+
+            self.case_background_name = line.split(maxsplit=1)[1].strip()
+
+    def update_case_screen_txt(self, case_folder_path: Path):
+        if not Path(case_folder_path).exists() or not Path(case_folder_path).is_dir():
+            print("Invalid case folder!")
+            return
+
+        with open("{}/case_screen.txt".format(case_folder_path), "w") as f:
+            f.write("bg {}".format(self.case_background_name))
+
     @staticmethod
     def from_existing_case_folder(case_folder_path: Path):
         if not case_folder_path.exists() or not case_folder_path.is_dir():
@@ -106,6 +136,7 @@ class PyWrightCase:
 
         read_case = PyWrightCase(case_name=case_folder_path.stem)
         read_case.read_from_intro_txt(str(case_folder_path))
+        read_case.read_from_case_screen_txt(str(case_folder_path))
 
         return read_case
 
