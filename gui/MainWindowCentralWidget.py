@@ -108,8 +108,8 @@ class MainWindowCentralWidget(QWidget):
         file_name = Path(file_path).name
         # Append folder name if two tabs with the same name are open
         for i in range(self.tab_widget.count()):
-            # Skip Game Properties tab
-            if self.is_game_properties_tab(i):
+            # Skip Game Properties tab and image viewer tabs
+            if not self.is_file_editing_tab(i):
                 continue
 
             opened_tab: FileEditWidget = self.tab_widget.widget(i)
