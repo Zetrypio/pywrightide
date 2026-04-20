@@ -2,11 +2,13 @@ from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
 
 from PyQt6.QtGui import QPixmap, QIcon, QPainter, QColor, QGuiApplication
 from PyQt6.QtWidgets import QDialog, QComboBox, QLabel, QVBoxLayout, QHBoxLayout, QSpinBox, QLayout, QPushButton, \
-    QSlider
+    QSlider, QInputDialog
 
 from data.PyWrightGame import CurrentPyWrightGame
 from data.SpriteSheet import SpriteSheet
 from data import IconThemes
+
+from gui.NewEmotionDialog import NewEmotionDialog
 
 GAME_TICK_RATE = 1000 / 60 # 60 FPS
 
@@ -20,6 +22,14 @@ class CharacterViewerDialog(QDialog):
         super().__init__(parent)
 
         self.setWindowTitle("Character Viewer")
+
+        self._add_character_button = QPushButton()
+        self._add_character_button.setText("New Character")
+        self._add_character_button.clicked.connect(self._handle_new_character)
+
+        self._add_emotion_button = QPushButton()
+        self._add_emotion_button.setText("New Emotion")
+        self._add_emotion_button.clicked.connect(self._handle_new_emotion)
 
         self._character_combobox = QComboBox(self)
         self._character_combobox.currentIndexChanged.connect(self._handle_character_combobox_changed)
@@ -69,6 +79,10 @@ class CharacterViewerDialog(QDialog):
 
         main_layout = QVBoxLayout()
 
+        new_button_layout = QHBoxLayout()
+        new_button_layout.addWidget(self._add_character_button)
+        new_button_layout.addWidget(self._add_emotion_button)
+
         character_layout = QHBoxLayout()
         character_layout.addWidget(QLabel("Character:"))
         character_layout.addWidget(self._character_combobox)
@@ -90,6 +104,7 @@ class CharacterViewerDialog(QDialog):
         bottom_buttons_layout.addStretch()
         bottom_buttons_layout.addWidget(self._close_button)
 
+        main_layout.addLayout(new_button_layout)
         main_layout.addLayout(character_layout)
         main_layout.addLayout(emotion_layout)
         main_layout.addLayout(frame_selector_layout)
@@ -104,6 +119,15 @@ class CharacterViewerDialog(QDialog):
         port_path = CurrentPyWrightGame().current_game.game_path / "art" / "port"
 
         self._character_combobox.addItems([x.stem for x in port_path.iterdir() if x.is_dir()])
+
+    def _handle_new_character(self):
+        result, ok = QInputDialog.getText(self, "New Character Name", "Enter new character name")
+        if ok:
+            print(result)
+
+    def _handle_new_emotion(self):
+        new_emotion_dialog = NewEmotionDialog(self)
+        new_emotion_dialog.show()
 
     def _handle_character_combobox_changed(self):
         if self._character_combobox.count() == 0:
