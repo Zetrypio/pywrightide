@@ -6,6 +6,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import QMessageBox
 
 from .PyWrightCase import PyWrightCase
+from .PyWrightMacro import PyWrightMacro, MacroLocationType
 
 from . import PyWrightFolder
 
@@ -24,9 +25,9 @@ class PyWrightGameInfo:
         self.game_icon_path: Path = game_icon_path
         self.game_cases: list[str] = game_cases
         self.game_path: Path = game_path
-        self.builtin_macros: list[str] = []
-        self.game_macros: list[str] = []
-        self.case_macros: dict[str, list[str]] = {} # Maps case name to list of macro names
+        self.builtin_macros: list[PyWrightMacro] = []
+        self.game_macros: list[PyWrightMacro] = []
+        self.case_macros: dict[str, list[PyWrightMacro]] = {} # Maps case name to list of macros
         self.pywright_folder_path: Path = Path("")
 
         if str(self.game_path) != "":
@@ -258,7 +259,7 @@ class PyWrightGameInfo:
             pass
 
     @staticmethod
-    def _parse_macros_in_folder(folder_path: Path) -> list[str]:
+    def _parse_macros_in_folder(folder_path: Path, kind: MacroLocationType) -> list[PyWrightMacro]:
         """Parses all .mcro files in a given folder path"""
         if not (folder_path.exists() and folder_path.is_dir()):
             raise FileNotFoundError("Selected folder doesn't exist!")
@@ -268,44 +269,45 @@ class PyWrightGameInfo:
         macros_list = []
 
         for macro_file_name in macro_files_list:
-            macros_list += PyWrightGameInfo._parse_macros_in_file(macro_file_name)
+            macros_list += PyWrightGameInfo._parse_macros_in_file(macro_file_name, kind)
 
         return macros_list
 
     @staticmethod
-    def _parse_macros_in_file(macro_file_name: str) -> list[str]:
+    def _parse_macros_in_file(macro_file_name: str, kind: MacroLocationType) -> list[PyWrightMacro]:
         """Parse all the macros in a specified file"""
         macros_list = []
 
         with open(macro_file_name, "r", encoding="UTF-8") as f:
             lines = f.readlines()
 
-            for line in lines:
+            for line_number, line in enumerate(lines):
                 if line.startswith("macro "):
                     splitted_lines = line.split(maxsplit=1)
-                    macros_list.append(splitted_lines[1].strip("\n"))
+                    macro_name = splitted_lines[1].strip("\n")
+                    macros_list.append(PyWrightMacro(macro_name, Path(macro_file_name), line_number, kind))
 
         return macros_list
 
     def parse_builtin_macros(self):
-        self.builtin_macros = PyWrightGameInfo._parse_macros_in_folder(self.pywright_folder_path / "core" / "macros")
+        self.builtin_macros = PyWrightGameInfo._parse_macros_in_folder(self.pywright_folder_path / "core" / "macros", MacroLocationType.BUILTIN)
 
     def parse_game_macros(self):
-        self.game_macros = PyWrightGameInfo._parse_macros_in_folder(self.game_path)
+        self.game_macros = PyWrightGameInfo._parse_macros_in_folder(self.game_path, MacroLocationType.GAME)
 
         # From the source code of the engine, a file named "macros.txt" in the game folder is also parsed for macros.
         other_location: Path = self.game_path / "macros.txt"
         if other_location.exists():
-            self.game_macros += PyWrightGameInfo._parse_macros_in_file(other_location)
+            self.game_macros += PyWrightGameInfo._parse_macros_in_file(other_location, MacroLocationType.GAME)
 
     def parse_case_macros(self):
         for case_name in self.game_cases:
-            case_macros = PyWrightGameInfo._parse_macros_in_folder(self.game_path / case_name)
+            case_macros = PyWrightGameInfo._parse_macros_in_folder(self.game_path / case_name, MacroLocationType.CASE)
 
             # Once again from the source code of the engine, a file named "macros.txt" in the case folder is also parsed for macros.
             other_location: Path = self.game_path / case_name / "macros.txt"
             if other_location.exists():
-                case_macros += PyWrightGameInfo._parse_macros_in_file(other_location)
+                case_macros += PyWrightGameInfo._parse_macros_in_file(other_location, MacroLocationType.CASE)
 
             self.case_macros[case_name] = case_macros
 

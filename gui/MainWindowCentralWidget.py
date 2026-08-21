@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QMessageBox
 
 from data import IDESettings, EditorThemes
 from data.PyWrightGame import PyWrightGameInfo
+from data.PyWrightMacro import PyWrightMacro
 from .FileEditWidget import FileEditWidget
 from .FindReplaceDialog import SearchScope, FindType, ReplaceType
 from .GamePropertiesWidget import GamePropertiesWidget
@@ -81,7 +82,7 @@ class MainWindowCentralWidget(QWidget):
 
             opened_tab: FileEditWidget = self.tab_widget.widget(i)
 
-            if opened_tab.file_path == file_path:
+            if opened_tab.is_same_file(file_path):
                 self.tab_widget.setCurrentIndex(i)
                 return
         # Create a new FileEditWidget, and add it to the tab widget
@@ -105,6 +106,7 @@ class MainWindowCentralWidget(QWidget):
         file_edit_widget.replace_next_in_next_tabs_requested.connect(self.replace_next_in_next_tabs)
         file_edit_widget.cursor_position_changed.connect(self._update_line_and_col)
         file_edit_widget.selected_text_changed.connect(self._handle_text_selection_changed)
+        file_edit_widget.jump_to_macro.connect(self._handle_open_macro_definition)
         file_name = Path(file_path).name
         # Append folder name if two tabs with the same name are open
         for i in range(self.tab_widget.count()):
@@ -118,6 +120,11 @@ class MainWindowCentralWidget(QWidget):
                 file_name = file_name + " @ " + file_edit_widget.file_folder
                 self.tab_widget.setTabText(i, opened_tab.file_name + " @ " + opened_tab.file_folder)
         self.open_new_tab(file_edit_widget, file_name if file_name != "" else "New File")
+
+    def _handle_open_macro_definition(self, macro: PyWrightMacro):
+        self.open_new_editing_tab(str(macro.path()))
+        opened_tab: FileEditWidget = self.tab_widget.currentWidget()
+        opened_tab.goto_line(macro.line())
 
     def _try_loading_editor_theme(self, theme_name: str):
         """Try loading the editor theme named {theme_name}, on the case of theme missing, load the default editor theme instead.

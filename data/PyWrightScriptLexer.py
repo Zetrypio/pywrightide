@@ -7,6 +7,8 @@ from PyQt6.Qsci import QsciLexerCustom, QsciScintilla, QsciAPIs
 
 from data import IDESettings, EditorThemes
 
+from .PyWrightMacro import PyWrightMacro, MacroLocationType
+
 commands = [
     # In the written order in doc.txt (with some additions):
     # "To add various objects"
@@ -284,7 +286,7 @@ class CustomQsciAPIs(QsciAPIs):
 
         # Commands or macros:
         if len(split) == 1:
-            macros = [*lexer.builtin_macros, *lexer.game_macros, *lexer.case_macros]
+            macros = [*lexer.builtin_macros_names, *lexer.game_macros_names, *lexer.case_macros_names]
             if split[0].startswith("{"):
                 return formatCompletions("{%s}", macros)
             return commands + macros
@@ -318,9 +320,13 @@ class PyWrightScriptLexer(QsciLexerCustom):
 
         self.set_font_properties(font_name, font_size, bold_font)
 
-        self.builtin_macros: list[str] = []
-        self.game_macros: list[str] = []
-        self.case_macros: list[str] = []
+        self.builtin_macros: list[PyWrightMacro] = []
+        self.game_macros: list[PyWrightMacro] = []
+        self.case_macros: list[PyWrightMacro] = []
+
+        self.builtin_macros_names: list[str] = []
+        self.game_macros_names: list[str] = []
+        self.case_macros_names: list[str] = []
 
         # Create a custom API to manage custom autocompletion
         api = CustomQsciAPIs(self)
@@ -337,14 +343,26 @@ class PyWrightScriptLexer(QsciLexerCustom):
         for i in range(0, 10):
             self.setFont(QFont(font_name, font_size, weight=font_weight), i)
 
-    def set_builtin_macros(self, new_list: list[str]):
+    def set_builtin_macros(self, new_list: list[PyWrightMacro]):
         self.builtin_macros = new_list
+        self.builtin_macros_names = [macro.name() for macro in new_list]
 
-    def set_game_macros(self, new_list: list[str]):
+    def set_game_macros(self, new_list: list[PyWrightMacro]):
         self.game_macros = new_list
+        self.game_macros_names = [macro.name() for macro in new_list]
 
-    def set_case_macros(self, new_list: list[str]):
+    def set_case_macros(self, new_list: list[PyWrightMacro]):
         self.case_macros = new_list
+        self.case_macros_names = [macro.name() for macro in new_list]
+
+    def get_macro(self, macro_name: str) -> PyWrightMacro|None:
+        if macro_name in self.case_macros_names:
+            return self.case_macros[self.case_macros_names.index(macro_name)]
+        if macro_name in self.game_macros_names:
+            return self.game_macros[self.game_macros_names.index(macro_name)]
+        if macro_name in self.builtin_macros_names:
+            return self.builtin_macros[self.builtin_macros_names.index(macro_name)]
+        return None
 
     def set_editor_color_theme(self):
         # Default Text Settings
@@ -472,11 +490,11 @@ class PyWrightScriptLexer(QsciLexerCustom):
             self._set_styling_for_string_token(token[0])
         elif is_string_number(token[0]):
             self.setStyling(token[1], 6)
-        elif token[0] in self.builtin_macros:
+        elif token[0] in self.builtin_macros_names:
             self.setStyling(token[1], 7)
-        elif token[0] in self.game_macros:
+        elif token[0] in self.game_macros_names:
             self.setStyling(token[1], 8)
-        elif token[0] in self.case_macros:
+        elif token[0] in self.case_macros_names:
             self.setStyling(token[1], 8)    # Question: do we do separate styles for case and game macros?
         else:
             self.setStyling(token[1], 0)

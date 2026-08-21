@@ -10,6 +10,7 @@ from PyQt6.Qsci import *
 from gui.IDEScintillaWidget import IDEScintillaWidget
 from .FindReplaceDialog import FindType, ReplaceType, SearchScope
 
+from data.PyWrightMacro import PyWrightMacro, MacroLocationType
 
 class FileEditWidget(QWidget):
 
@@ -27,6 +28,8 @@ class FileEditWidget(QWidget):
     """This just signals that the cursor position changed, without giving any info about line and column;
     since that will be MainWindowCentralWidget's responsibility instead."""
 
+    jump_to_macro = pyqtSignal(PyWrightMacro)
+
     def __init__(self, pywright_dir, selected_file=""):
         super().__init__()
 
@@ -37,6 +40,8 @@ class FileEditWidget(QWidget):
         self.sci.modificationChanged.connect(self._emit_file_modified)
 
         self.sci.cursorPositionChanged.connect(self._handle_cursor_position_changed)
+        
+        self.sci.jump_to_macro.connect(self.jump_to_macro.emit)
 
         self.pywright_working_dir = pywright_dir
 
@@ -90,13 +95,13 @@ class FileEditWidget(QWidget):
 
         return result
 
-    def supply_builtin_macros_to_lexer(self, builtin_macros: list[str]):
+    def supply_builtin_macros_to_lexer(self, builtin_macros: list[PyWrightMacro]):
         self.sci.supply_builtin_macros_to_lexer(builtin_macros)
 
-    def supply_game_macros_to_lexer(self, game_macros: list[str]):
+    def supply_game_macros_to_lexer(self, game_macros: list[PyWrightMacro]):
         self.sci.supply_game_macros_to_lexer(game_macros)
 
-    def supply_case_macros_to_lexer(self, case_macros: list[str]):
+    def supply_case_macros_to_lexer(self, case_macros: list[PyWrightMacro]):
         self.sci.supply_case_macros_to_lexer(case_macros)
 
     def supply_font_properties_to_lexer(self, font_name: str, font_size: int, bold_font: bool):
@@ -232,3 +237,18 @@ class FileEditWidget(QWidget):
     def _handle_selection_changed(self):
         self.sci.highlight_all_occurrences()
         self.selected_text_changed.emit()
+
+    def goto_line(self, line: int):
+        #try:
+        self.sci.setSelection(line, 0, line+1, 0)
+        #except: # maybe?
+        #    self.sci.setSelection(line, 0, line, 0)
+
+    def is_same_file(self, file: str):
+        if self._is_a_new_file:
+            return False
+        try:
+            return Path(self.file_path).samefile(Path(file))
+        except Exception as e:
+            print(e)
+            return False

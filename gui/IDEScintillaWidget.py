@@ -1,12 +1,12 @@
 import re
 
 from PyQt6.Qsci import QsciScintilla
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QKeyEvent
 
 from data import EditorThemes, IDESettings
 from data.PyWrightScriptLexer import PyWrightScriptLexer
-
+from data.PyWrightMacro import PyWrightMacro, MacroLocationType
 
 _HIGHLIGHT_INDICATOR_ID = 30
 _PARAM_HILIGHT_INDICATOR_ID = 31 # why do we start at 30?
@@ -167,6 +167,8 @@ class IDEScintillaWidget(QsciScintilla):
     _highlight_in_progress = False
     """Ensures _highlight_all_occurences() runs only once"""
 
+    jump_to_macro = pyqtSignal(PyWrightMacro)
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -209,6 +211,9 @@ class IDEScintillaWidget(QsciScintilla):
             except Exception as e:
                 import traceback
                 traceback.print_exception(e)
+
+        elif event.key() == Qt.Key.Key_F3:
+            self._handle_jump_to_macro()
         else:
             super().keyPressEvent(event)
 
@@ -228,13 +233,23 @@ class IDEScintillaWidget(QsciScintilla):
     def _handle_lexer_selection_request(self, line_begin: int, index_begin: int, line_end: int, index_end: int):
         self.setSelection(line_begin, index_begin, line_end, index_end)
 
-    def supply_builtin_macros_to_lexer(self, builtin_macros: list[str]):
+    def _handle_jump_to_macro(self):
+        row, col = self.getCursorPosition()
+        macro_name: str = self.wordAtLineIndex(row, col)
+        # TODO : verify we are at a position where a macro is possible???
+
+        macro: PyWrightMacro|None = self._lexer.get_macro(macro_name)
+        if macro is not None:
+            print("Jumping to:", macro)
+            self.jump_to_macro.emit(macro)
+
+    def supply_builtin_macros_to_lexer(self, builtin_macros: list[PyWrightMacro]):
         self._lexer.set_builtin_macros(builtin_macros)
 
-    def supply_game_macros_to_lexer(self, game_macros: list[str]):
+    def supply_game_macros_to_lexer(self, game_macros: list[PyWrightMacro]):
         self._lexer.set_game_macros(game_macros)
 
-    def supply_case_macros_to_lexer(self, case_macros: list[str]):
+    def supply_case_macros_to_lexer(self, case_macros: list[PyWrightMacro]):
         self._lexer.set_case_macros(case_macros)
 
     def supply_font_properties_to_lexer(self, font_name: str, font_size: int, bold_font: bool):
