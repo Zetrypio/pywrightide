@@ -7,6 +7,9 @@ IDE_BUILD_STRING = "25.11.30"
 __program_settings = QSettings("PyWrightIDE", "PyWrightIDE")
 
 
+SETTINGS_VERSION = 1
+
+
 # Key Names
 FONT_NAME_KEY = "editor/font/name"
 FONT_SIZE_KEY = "editor/font/size"
@@ -26,6 +29,10 @@ AUTOCOMPLETION_THRESHOLD_KEY = "autocompletion_suggestions_threshold"
 HIGHLIGHT_MATCHING_TEXT_KEY = "editor/highlight_matching_text"
 HIGHLIGHT_FILL_RECT_KEY = "editor/highlight_fill_rect"
 IMAGE_VIEWER_USE_CONTROL_TO_ZOOM_KEY = "image_viewer/use_control_to_zoom"
+SHOW_DIRECTORY_VIEW_KEY = "show_directory_view"
+SHOW_ASSET_BROWSER_KEY = "show_asset_browser"
+SHOW_LOGGER_VIEW_KEY = "show_logger_view"
+SETTINGS_VERSION_KEY = "settings_version"
 
 # Functions
 
@@ -206,6 +213,30 @@ def set_image_viewer_zoom_style(new_value: bool):
     __program_settings.setValue(IMAGE_VIEWER_USE_CONTROL_TO_ZOOM_KEY, new_value)
 
 
+def get_show_directory_view() -> bool:
+    return __program_settings.value(SHOW_DIRECTORY_VIEW_KEY, True, bool)
+
+def set_show_directory_view(new_value: bool):
+    __program_settings.setValue(SHOW_DIRECTORY_VIEW_KEY, new_value)
+
+
+def get_show_asset_browser() -> bool:
+    return __program_settings.value(SHOW_ASSET_BROWSER_KEY, True, bool)
+
+def set_show_asset_browser(new_value: bool):
+    __program_settings.setValue(SHOW_ASSET_BROWSER_KEY, new_value)
+
+
+def get_show_logger_view() -> bool:
+    return __program_settings.value(SHOW_LOGGER_VIEW_KEY, False, bool)
+
+def set_show_logger_view(new_value: bool):
+    __program_settings.setValue(SHOW_LOGGER_VIEW_KEY, new_value)
+
+
+def get_settings_version() -> int | None:
+    return __program_settings.value(SETTINGS_VERSION_KEY)
+
 def all_keys() -> list[str]:
     return __program_settings.allKeys()
 
@@ -219,6 +250,7 @@ def window_state_data_exists() -> bool:
 
 
 def save_settings():
+    __program_settings.setValue(SETTINGS_VERSION_KEY, SETTINGS_VERSION)
     __program_settings.sync()
 
 
@@ -238,3 +270,6 @@ def reset_settings():
     __program_settings.setValue(HIGHLIGHT_MATCHING_TEXT_KEY, True)
     __program_settings.setValue(HIGHLIGHT_FILL_RECT_KEY, True)
     __program_settings.setValue(IMAGE_VIEWER_USE_CONTROL_TO_ZOOM_KEY, False)
+    __program_settings.setValue(SHOW_DIRECTORY_VIEW_KEY, True)
+    __program_settings.setValue(SHOW_ASSET_BROWSER_KEY, True)
+    __program_settings.setValue(SHOW_LOGGER_VIEW_KEY, False)

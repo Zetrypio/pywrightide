@@ -8,6 +8,7 @@ from PyQt6.QtCore import Qt
 
 from .MainWindowTopToolbar import MainWindowTopToolbar
 from .MainWindowCentralWidget import MainWindowCentralWidget
+from .WelcomeWidget import WelcomeWidget
 from .MainWindowStatusBar import MainWindowStatusBar
 from .NewGameDialog import NewGameDialog
 from .OpenGameDialog import OpenGameDialog
@@ -19,6 +20,7 @@ from .FindReplaceDialog import FindReplaceDialog
 from .AssetBrowserRootWidget import AssetBrowserRootWidget
 from .FileEditWidget import FileEditWidget
 from .MissingFilesDialog import MissingFilesDialog
+from .AboutDialog import about_pywright_ide
 
 from data import IDESettings, ColorThemes, PyWrightFolder
 from data.PyWrightGame import PyWrightGameInfo, CurrentPyWrightGame
@@ -41,13 +43,18 @@ class IDEMainWindow(QMainWindow):
         self.setWindowTitle("PyWright IDE")
         self.setWindowIcon(QIcon("res/icons/ideicon.png"))
         self.setMinimumSize(720, 540)
-        if IDESettings.window_geometry_data_exists():
+        if IDESettings.window_geometry_data_exists() and IDESettings.get_settings_version() is not None:
             self.restoreGeometry(IDESettings.get_window_geometry())
 
         self.directory_view = DirectoryViewWidget(self)
         self.asset_manager_widget = AssetBrowserRootWidget(self)
         self.logger_view = PyWrightLoggerWidget()
         self.logger_view.hide()
+
+        self.welcome_widget = WelcomeWidget(self)
+        self.welcome_widget.game_path_selected.connect(self.pick_game_folder_and_open_game_properties_tab)
+        self.welcome_widget.settings_selected.connect(self._handle_settings)
+        self.welcome_widget.about_selected.connect(lambda: about_pywright_ide(self))
 
         self.central_widget = MainWindowCentralWidget(self)
 
@@ -85,35 +92,69 @@ class IDEMainWindow(QMainWindow):
 
         # Toolbar and the central widget
         self.addToolBar(self._top_toolbar)
-        self.setCentralWidget(self.central_widget)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.directory_view)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.asset_manager_widget)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.logger_view)
 
-        # Try to load the last open game here, if the option is enabled, and the game folder still exists.
-        if selected_game_path != "":
-            self.pick_game_folder_and_open_game_properties_tab(Path(selected_game_path))
-        elif IDESettings.get_autoload_last_game_check():
-            autoload_path: str = IDESettings.get_autoload_last_game_path()
-            if autoload_path != "" and PyWrightGameInfo.is_valid_game_folder(Path(autoload_path)):
-                self.pick_game_folder(Path(autoload_path))
-
-                # Also restore previously open tabs
-                open_tabs = IDESettings.get_last_open_tabs()
-                if len(open_tabs) > 0:
-                    last_tab_index = IDESettings.get_last_open_tab_index()
-                    missing_files = self.central_widget.restore_last_open_tabs(open_tabs, last_tab_index)
-
-                    if len(missing_files) > 0:
-                        missing_files_dialog = MissingFilesDialog(self, missing_files)
-                        missing_files_dialog.exec()
-
         # Try loading the window state (docks positions, visibility, etc.)
-        if IDESettings.window_state_data_exists():
+        if IDESettings.window_state_data_exists() and IDESettings.get_settings_version() is not None:
             self.restoreState(IDESettings.get_window_state())
+
+        self._is_directory_view_hidden = not IDESettings.get_show_directory_view()
+        self._is_asset_browser_hidden = not IDESettings.get_show_asset_browser()
+        self._is_logger_view_hidden = not IDESettings.get_show_logger_view()
+
+        game_open_condition = selected_game_path != "" and Path(selected_game_path).exists() and Path(selected_game_path).is_dir()
+
+        # Try to load the last open game here, if the option is enabled, and the game folder still exists.
+        if game_open_condition:
+            self.pick_game_folder(Path(selected_game_path))
+
+            # Also restore previously open tabs
+            open_tabs = IDESettings.get_last_open_tabs()
+            if len(open_tabs) > 0:
+                last_tab_index = IDESettings.get_last_open_tab_index()
+                missing_files = self.central_widget.restore_last_open_tabs(open_tabs, last_tab_index)
+
+                if len(missing_files) > 0:
+                    missing_files_dialog = MissingFilesDialog(self, missing_files)
+                    missing_files_dialog.exec()
+            else:
+                self.central_widget.open_game_properties_tab()
+        else:
+            self.setCentralWidget(self.welcome_widget)
+            self.central_widget.hide()
+            self._top_toolbar.hide()
+            self.status_bar.hide()
+            self.directory_view.hide()
+            self.logger_view.hide()
+            self.asset_manager_widget.hide()
 
         # Apply the color theme
         self._apply_new_color_theme()
+
+    def switch_to_editor_mode(self):
+        self.welcome_widget = None
+        self.central_widget.show()
+        self.setCentralWidget(self.central_widget)
+        self._top_toolbar.show()
+        self.status_bar.show()
+        self.directory_view.setVisible(not self._is_directory_view_hidden)
+        self.asset_manager_widget.setVisible(not self._is_asset_browser_hidden)
+        self.logger_view.setVisible(not self._is_logger_view_hidden)
+
+        self.directory_view.visibilityChanged.connect(self._handle_directory_view_visibility_change)
+        self.asset_manager_widget.visibilityChanged.connect(self._handle_asset_browser_visibility_change)
+        self.logger_view.visibilityChanged.connect(self._handle_logger_view_visibility_change)
+
+    def _handle_directory_view_visibility_change(self):
+        self._is_directory_view_hidden = self.directory_view.isHidden()
+
+    def _handle_asset_browser_visibility_change(self):
+        self._is_asset_browser_hidden = self.asset_manager_widget.isHidden()
+
+    def _handle_logger_view_visibility_change(self):
+        self._is_logger_view_hidden = self.logger_view.isHidden()
 
     def pick_game_folder(self, game_folder_path: Path):
         if self.central_widget.attempt_closing_unsaved_tabs():
@@ -123,6 +164,7 @@ class IDEMainWindow(QMainWindow):
             if self.central_widget.tabs_count() > 0:
                 self.central_widget.clear_tabs()
 
+            self.switch_to_editor_mode()
             self.status_bar.set_installation_path_info(str(current_pywright_game.current_pywright_folder_path))
 
             self.central_widget.set_selected_game(current_pywright_game.current_game)
@@ -176,7 +218,7 @@ class IDEMainWindow(QMainWindow):
         for recent_folder_path in self.recent_folders:
             if folder_path == recent_folder_path:
                 return
-        self.recent_folders.append(folder_path)
+        self.recent_folders.insert(0, folder_path)
 
     def _handle_open_file(self):
         open_dialog = QFileDialog.getOpenFileName(self, "Open File", str(current_pywright_game.current_game.game_path),
@@ -211,6 +253,9 @@ class IDEMainWindow(QMainWindow):
 
     def _apply_settings(self):
         self.central_widget.apply_settings()
+        # Setting a different central widget destroys the previous one
+        if self.welcome_widget is not None:
+            self.welcome_widget.set_autoload_checkbox_ticked(IDESettings.get_autoload_last_game_check())
         self._apply_new_color_theme()
         self._top_toolbar.update_toolbar_icons()
 
@@ -249,14 +294,20 @@ class IDEMainWindow(QMainWindow):
             return
 
         # Always save the last open project's path and the selected game
-        IDESettings.set_autoload_last_game_path(str(current_pywright_game.current_game.game_path))
-        IDESettings.set_recent_open_tabs(self.central_widget.get_open_tabs_paths())
-        IDESettings.set_last_open_tab_index(self.central_widget.get_current_tab_index())
+        if current_pywright_game.current_game is not None:
+            IDESettings.set_autoload_last_game_path(str(current_pywright_game.current_game.game_path))
+            IDESettings.set_recent_open_tabs(self.central_widget.get_open_tabs_paths())
+            IDESettings.set_last_open_tab_index(self.central_widget.get_current_tab_index())
 
         IDESettings.set_recent_games(self.recent_folders)
 
         IDESettings.set_window_geometry(self.saveGeometry())
         IDESettings.set_window_state(self.saveState())
 
+        IDESettings.set_show_directory_view(not self._is_directory_view_hidden)
+        IDESettings.set_show_asset_browser(not self._is_asset_browser_hidden)
+        IDESettings.set_show_logger_view(not self._is_logger_view_hidden)
+
         self.asset_manager_widget.deinit()
+        IDESettings.save_settings()
         event.accept()

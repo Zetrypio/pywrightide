@@ -43,6 +43,8 @@ class FileEditWidget(QWidget):
         
         self.sci.jump_to_macro.connect(self.jump_to_macro.emit)
 
+        self.sci.textChanged.connect(self._handle_text_changed)
+
         self.pywright_working_dir = pywright_dir
 
         self.layout.addWidget(self.sci)
@@ -76,6 +78,9 @@ class FileEditWidget(QWidget):
         lines = self._try_read_lines(selected_file)
         text = "".join(lines)
         self.sci.setText(text)
+
+        self.sci.setMarginWidth(0, "0" + str(len(lines)))
+
         # Common sense: Newly opened files aren't modified.
         self.sci.setModified(False)
         # Set the cursor at the beginning of file so that searching works without the user having to place it first
@@ -252,3 +257,8 @@ class FileEditWidget(QWidget):
         except Exception as e:
             print(e)
             return False
+
+    def _handle_text_changed(self):
+        linecount = self.sci.text().count('\n') + 1
+        self.sci.setMarginWidth(0, "0" + str(linecount))
+        self.sci.apply_code_folding()

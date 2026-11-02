@@ -175,11 +175,11 @@ def is_string_float(string: str) -> bool:
 class CustomQsciAPIs(QsciAPIs):
     """This class allows us to do custom behaviour on autocompletion."""
     
-    def __init__(self, lexer:'QsciLexer')->None:
+    def __init__(self, lexer: 'QsciLexer') -> None:
         super().__init__(lexer)
 
         self._has_just_inserted = 0                 # counter for _after_completion_is_applied()
-        self._completion_selected :str|None = None  # Either the text to insert or None if no such text
+        self._completion_selected : str | None = None  # Either the text to insert or None if no such text
 
         # Connect events
         sci: QsciScintilla = self.lexer().parent()
@@ -259,7 +259,7 @@ class CustomQsciAPIs(QsciAPIs):
             self._completion_selected = textToInsert
             self._has_just_inserted = 2
 
-    def updateAutoCompletionList(self, context:[str], list:[str])->[str]:
+    def updateAutoCompletionList(self, context: list[str], list: list[str]) -> list[str]:
         """
         Triggered when the autocompletion list is about to pop-up,
         to fill with custom proposals depending on the context.
@@ -366,12 +366,16 @@ class PyWrightScriptLexer(QsciLexerCustom):
 
     def set_editor_color_theme(self):
         # Default Text Settings
-        self.setDefaultColor(QColor(EditorThemes.current_editor_theme.colors[0].text_color))
-        self.setDefaultPaper(QColor(EditorThemes.current_editor_theme.colors[0].paper_color))
+        self.setDefaultColor(QColor.fromString(EditorThemes.current_editor_theme.get_color_string(EditorThemes.ColorName.DEFAULT, EditorThemes.ColorTarget.TEXT)))
+        self.setDefaultPaper(QColor.fromString(EditorThemes.current_editor_theme.get_color_string(EditorThemes.ColorName.DEFAULT, EditorThemes.ColorTarget.PAPER)))
 
-        for color_index in range(len(EditorThemes.current_editor_theme.colors)):
-            self.setColor(QColor(EditorThemes.current_editor_theme.colors[color_index].text_color), color_index)
-            self.setPaper(QColor(EditorThemes.current_editor_theme.colors[color_index].paper_color), color_index)
+        for color_enum in EditorThemes.ColorName:
+            if color_enum > EditorThemes.ColorName.STRING_TOKENS:
+                break
+            text_color = EditorThemes.current_editor_theme.get_color_string(color_enum, EditorThemes.ColorTarget.TEXT)
+            self.setColor(QColor.fromString(text_color), int(color_enum))
+            paper_color = EditorThemes.current_editor_theme.get_color_string(color_enum, EditorThemes.ColorTarget.PAPER)
+            self.setPaper(QColor.fromString(paper_color), int(color_enum))
 
     def language(self):
         return "PyWright Script"
@@ -535,5 +539,3 @@ class PyWrightScriptLexer(QsciLexerCustom):
                     self.setStyling(len(bytearray(token, "utf-8")), 9)
                 else:
                     self.setStyling(len(bytearray(token, "utf-8")), 5)
-
-
